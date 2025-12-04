@@ -35,7 +35,6 @@ class Cloud(pygame.Rect):
         pygame.Rect.__init__(self, cloud_x, cloud_y,
                              cloud_width, cloud_height)
         self.img = img
-        self.passed = False
 
 
 # class lollipop
@@ -48,7 +47,6 @@ class Lollipop(pygame.Rect):
         pygame.Rect.__init__(self, x, y,
                              lollipop_width, lollipop_height)
         self.img = img
-        self.passed = False
 
 
 # game images
@@ -88,8 +86,8 @@ def draw():
     if game_over:
         text_str = "Game Over: " + text_str
 
-    text_font = pygame.font.SysFont("Comic Sans MS", 45)
-    text_render = text_font.render(text_str, True, "white")
+    text_font = pygame.font.SysFont("Comic Sans MS", 45, bold=True)
+    text_render = text_font.render(text_str, True, "purple")
     window.blit(text_render, (5, 0))
 
     for lollipop in lollipops:
@@ -109,10 +107,6 @@ def move():
     for cloud in clouds:
         cloud.x += velocity_x
 
-        if not cloud.passed and unicorn.x > cloud.x + cloud.width:
-            score += 0.5
-            cloud.passed = True
-
         if unicorn.colliderect(cloud):
             game_over = True
             return
@@ -123,19 +117,15 @@ def move():
     for lollipop in lollipops:
         lollipop.x += velocity_x
 
-        # sudar sa jednorogom
         if unicorn.colliderect(lollipop):
             score += 1
             lollipops.remove(lollipop)
             continue
 
-    # brisanje ako izađe sa leve strane
     lollipops[:] = [i for i in lollipops if i.x > -50]
 
 
 def create_clouds():
-    # random_cloud_y = cloud_y-cloud_height/4
-    # random_cloud_y = cloud_y-cloud_height/4-random.random()*(cloud_height/2)
     opening_space = GAME_HEIGHT/4
 
     random_top_y = random.randint(-cloud_height + 50, int(GAME_HEIGHT/2))
@@ -152,9 +142,19 @@ def create_clouds():
 
 
 def create_lollipops():
-    random_y = random.randint(50, GAME_HEIGHT - 100)
-    new_lollipop = Lollipop(lollipop_image, GAME_WIDTH, random_y)
-    lollipops.append(new_lollipop)
+    max_attempts = 10
+    for _ in range(max_attempts):
+        random_y = random.randint(50, GAME_HEIGHT - 100)
+        new_lollipop = Lollipop(lollipop_image, GAME_WIDTH, random_y)
+
+        collision = False
+        for cloud in clouds:
+            if new_lollipop.colliderect(cloud):
+                collision = True
+                break
+        if not collision:
+            lollipops.append(new_lollipop)
+            break
 
     print(len(lollipops))
 
@@ -165,9 +165,6 @@ pygame.display.set_caption("Magic Unicorn")
 clock = pygame.time.Clock()
 
 create_clouds_timer = pygame.USEREVENT + 0
-# userevent je enum a plus 0 oznacava da je ovo prvi event
-# mozemo da dodamo 9 custom eventova
-# ako hocemo sledeci povecamo broj za 1
 pygame.time.set_timer(create_clouds_timer, 3000)
 
 create_lollipops_timer = pygame.USEREVENT + 1
@@ -187,7 +184,6 @@ while True:
         if event.type == create_lollipops_timer and not game_over:
             create_lollipops()
 
-        # pritisnut neki taster (neki od ovih dole)
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_SPACE, pygame.K_x, pygame.K_UP):
                 velocity_y = -4
